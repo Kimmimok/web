@@ -349,14 +349,28 @@ function CruiseBookingForm({ formData, setFormData }) {
           <React.Fragment key={idx}>
             <div className="form-group">
               <label htmlFor={`cruise_${col.key}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {/* ...existing code for icons and label... */}
-                {col.key === '체크인' && (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="10" rx="2" stroke="#007bff" strokeWidth="2"/><rect x="5" y="1" width="6" height="2" rx="1" fill="#007bff"/></svg>
-                )}
-                {col.key === '일정' && (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#28a745" strokeWidth="2"/><rect x="7" y="4" width="2" height="5" rx="1" fill="#28a745"/><rect x="7" y="10" width="2" height="2" rx="1" fill="#28a745"/></svg>
-                )}
-                {/* ...other icons... */}
+                {(() => {
+                  const iconMap = {
+                    체크인: <span role="img" aria-label="calendar">📅</span>,
+                    일정: <span role="img" aria-label="schedule">🗓️</span>,
+                    크루즈: <span role="img" aria-label="ship">🚢</span>,
+                    객실종류: <span role="img" aria-label="room">🏨</span>,
+                    구분: <span role="img" aria-label="tag">🏷️</span>,
+                    객실비고: <span role="img" aria-label="memo">📝</span>,
+                    객실코드: <span role="img" aria-label="key">🔑</span>,
+                    금액: <span role="img" aria-label="money">💰</span>,
+                    ADULT: <span role="img" aria-label="adult">🧑</span>,
+                    CHILD: <span role="img" aria-label="child">🧒</span>,
+                    TODDLER: <span role="img" aria-label="baby">👶</span>,
+                    승선인원: <span role="img" aria-label="group">👥</span>,
+                    인원수: <span role="img" aria-label="group">👥</span>,
+                    객실수: <span role="img" aria-label="room">🏨</span>,
+                    승선도움: <span role="img" aria-label="help">🦮</span>,
+                    커넥팅룸: <span role="img" aria-label="connect">🔗</span>,
+                    Email: <span role="img" aria-label="email">✉️</span>
+                  };
+                  return iconMap[col.key];
+                })()}
                 {col.label}
               </label>
               {/* ...existing code for input rendering... */}
@@ -532,7 +546,7 @@ function CruiseBookingForm({ formData, setFormData }) {
                   required={col.required}
                   style={{ backgroundColor: '#f8f9fa', color: '#333', fontWeight: 'bold' }}
                 />
-              ) : (['ADULT', 'CHILD', 'TODDLER'].includes(col.key) ? (
+              ) : (["ADULT", "CHILD", "TODDLER"].includes(col.key) ? (
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {[1,2,3,4,5,6,7].map(num => (
                     <button

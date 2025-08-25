@@ -315,13 +315,40 @@ function AirportServiceForm({ formData, setFormData }) {
               )}
             </React.Fragment>
           ))}
-        <button
-          type="submit"
-          style={{ backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '6px', padding: '10px 18px', fontSize: '1.1rem', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}
-          disabled={loading}
-        >
-          {loading ? '저장중...' : '저장 및 전송'}
-        </button>
+        <div className="form-footer-row" style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+          <button
+            type="button"
+            style={{
+              backgroundColor: '#007bff',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '10px 18px',
+              fontSize: '1.1rem',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+            }}
+            onClick={() => window.location.href = '/reservation'}
+          >홈</button>
+          <button
+            type="submit"
+            style={{
+              backgroundColor: '#007bff',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '10px 18px',
+              fontSize: '1.1rem',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+            }}
+            disabled={loading}
+          >
+            {loading ? '저장중...' : '저장 및 전송'}
+          </button>
+        </div>
       </form>
     </div>
   );

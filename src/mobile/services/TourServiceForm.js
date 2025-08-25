@@ -25,6 +25,24 @@ const FIXED_HEADERS = [
 ];
 
 function TourServiceForm({ formData, setFormData }) {
+  // 컬럼별 아이콘 매핑
+  const iconMap = {
+    투어코드: <span role="img" aria-label="code">🔑</span>,
+    투어명: <span role="img" aria-label="tour">🗺️</span>,
+    투어종류: <span role="img" aria-label="type">🏷️</span>,
+    상세구분: <span role="img" aria-label="detail">🔎</span>,
+    수량: <span role="img" aria-label="count">#️⃣</span>,
+    시작일자: <span role="img" aria-label="start">📅</span>,
+    종료일자: <span role="img" aria-label="end">📅</span>,
+    투어인원: <span role="img" aria-label="person">👤</span>,
+    배차: <span role="img" aria-label="car">🚗</span>,
+    픽업위치: <span role="img" aria-label="pickup">📍</span>,
+    드랍위치: <span role="img" aria-label="drop">📍</span>,
+    금액: <span role="img" aria-label="money">💰</span>,
+    합계: <span role="img" aria-label="sum">➕</span>,
+    Email: <span role="img" aria-label="email">✉️</span>,
+    투어비고: <span role="img" aria-label="memo">📝</span>
+  };
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -68,13 +86,15 @@ function TourServiceForm({ formData, setFormData }) {
 
   return (
     <div className="customer-info">
-      <h2 className="step-title">투어 서비스 정보 (SH_T 시트 컬럼)</h2>
+      <h2 className="step-title">투어 서비스 정보</h2>
       <form className="sheet-columns-form" onSubmit={handleSubmit}>
         {FIXED_HEADERS
           .filter(col => col.key !== '서비스ID' && col.key !== '주문ID' && col.key !== 'ID')
           .map((col, idx) => (
             <div className="form-group" key={idx}>
-              <label htmlFor={`sht_${col.key}`}>{col.label}</label>
+              <label htmlFor={`sht_${col.key}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {iconMap[col.key]}{col.label}
+              </label>
               <input
                 type={col.type}
                 id={`sht_${col.key}`}

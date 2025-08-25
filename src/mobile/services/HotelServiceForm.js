@@ -27,6 +27,26 @@ const FIXED_HEADERS = [
 ];
 
 function HotelServiceForm({ formData, setFormData }) {
+  // 컬럼별 아이콘 매핑
+  const iconMap = {
+    호텔코드: <span role="img" aria-label="code">🔑</span>,
+    호텔명: <span role="img" aria-label="hotel">🏨</span>,
+    객실명: <span role="img" aria-label="room">🚪</span>,
+    객실종류: <span role="img" aria-label="type">🏷️</span>,
+    객실수: <span role="img" aria-label="count">#️⃣</span>,
+    일정: <span role="img" aria-label="schedule">🗓️</span>,
+    체크인날짜: <span role="img" aria-label="checkin">📅</span>,
+    체크아웃날짜: <span role="img" aria-label="checkout">📅</span>,
+    조식서비스: <span role="img" aria-label="breakfast">🥐</span>,
+    ADULT: <span role="img" aria-label="adult">🧑</span>,
+    CHILD: <span role="img" aria-label="child">🧒</span>,
+    TOODLER: <span role="img" aria-label="baby">👶</span>,
+    엑스트라베드: <span role="img" aria-label="bed">🛏️</span>,
+  "투숙인원 비고": <span role="img" aria-label="memo">📝</span>,
+  금액: <span role="img" aria-label="money">💰</span>,
+    합계: <span role="img" aria-label="sum">➕</span>,
+    Email: <span role="img" aria-label="email">✉️</span>
+  };
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -70,13 +90,15 @@ function HotelServiceForm({ formData, setFormData }) {
 
   return (
     <div className="customer-info">
-      <h2 className="step-title">호텔 서비스 정보 (SH_H 시트 컬럼)</h2>
+      <h2 className="step-title">호텔 서비스 정보</h2>
       <form className="sheet-columns-form" onSubmit={handleSubmit}>
         {FIXED_HEADERS
           .filter(col => col.key !== '서비스ID')
           .map((col, idx) => (
             <div className="form-group" key={idx}>
-              <label htmlFor={`shh_${col.key}`}>{col.label}</label>
+              <label htmlFor={`shh_${col.key}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {iconMap[col.key]}{col.label}
+              </label>
               <input
                 type={col.type}
                 id={`shh_${col.key}`}
