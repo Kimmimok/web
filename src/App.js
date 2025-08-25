@@ -63,7 +63,7 @@ function App() {
 
   return (
     <div className="App">
-      <nav className="navbar">
+      <nav className="navbar" style={{cursor:'pointer'}}  onClick={() => window.location.href = '/reservation'}>
         <h1 style={{cursor:'pointer'}} onClick={() => setCurrentPage('mobileform')}>스테이 하롱 트레블</h1>
         {isMobile ? (
           <>

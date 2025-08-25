@@ -8,10 +8,38 @@ import TourServiceForm from './services/TourServiceForm';
 import HotelServiceForm from './services/HotelServiceForm';
 import RentalCarServiceForm from './services/RentalCarServiceForm';
 
-const SHEET_ID = '16bKsWL_0HkZeAbOVVntSz0ehUHRGO1PoanNhFLghvEo';
-const API_KEY = 'AIzaSyDyfByYamh-s9972-ZeVr_Fyq64jH1snrw';
+// 서비스별 컬럼값을 한 번만 fetch해서 context로 관리
+const SERVICE_SHEET_MAP = {
+  SH_R: 'SH_R',
+  SH_C: 'SH_C',
+  SH_CC: 'SH_CC',
+  SH_P: 'SH_P',
+  SH_T: 'SH_T',
+  SH_H: 'SH_H',
+  SH_RC: 'SH_RC'
+};
+
+const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+const API_KEY = process.env.REACT_APP_API_KEY;
 
 function MobileBookingForm() {
+  // 서비스별 컬럼값을 한 번만 fetch해서 공유
+  const [serviceHeaders, setServiceHeaders] = useState({});
+  // 쿼리스트링에서 사용자 정보 자동 입력
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const customerName = params.get('customerName') || '';
+    const email = params.get('email') || '';
+    const phone = params.get('phone') || '';
+    if (customerName || email || phone) {
+      setFormData(prev => ({
+        ...prev,
+        customerName,
+        email,
+        phone
+      }));
+    }
+  }, []);
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedService, setSelectedService] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,31 +54,19 @@ function MobileBookingForm() {
     specialRequests: '',
     serviceSpecific: {}
   });
-  // SH_R 시트 컬럼명 fetch 함수
-  const [shrHeaders, setShrHeaders] = useState([]);
+  // 모든 서비스 컬럼값을 최초 1회만 fetch
   React.useEffect(() => {
-    async function fetchHeaders() {
-      if (selectedService === 'SH_C') {
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/SH_R!1:1?key=${API_KEY}`);
+    async function fetchAllHeaders() {
+      const newHeaders = {};
+      for (const [serviceId, sheetName] of Object.entries(SERVICE_SHEET_MAP)) {
+        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!1:1?key=${API_KEY}`);
         const data = await res.json();
-        setShrHeaders(data.values ? data.values[0] : []);
+        newHeaders[serviceId] = data.values ? data.values[0] : [];
       }
+      setServiceHeaders(newHeaders);
     }
-    fetchHeaders();
-  }, [selectedService]);
-
-  // SH_C 시트 컬럼명 fetch 함수 (차량서비스용)
-  const [shcHeaders, setShcHeaders] = useState([]);
-  React.useEffect(() => {
-    async function fetchHeaders() {
-      if (selectedService === 'SH_CC') {
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/SH_C!1:1?key=${API_KEY}`);
-        const data = await res.json();
-        setShcHeaders(data.values ? data.values[0] : []);
-      }
-    }
-    fetchHeaders();
-  }, [selectedService]);
+    fetchAllHeaders();
+  }, []);
 
   const services = [
     { id: 'SH_R', name: '예약자 정보', icon: '👤', color: '#10B981' },
@@ -211,25 +227,25 @@ function MobileBookingForm() {
         )}
 
         {currentStep === 1 && selectedService === 'SH_R' && (
-          <ReservationForm formData={formData} setFormData={setFormData} />
+          <ReservationForm formData={formData} setFormData={setFormData} headers={serviceHeaders['SH_R'] || []} />
         )}
         {currentStep === 1 && selectedService === 'SH_C' && (
-          <CruiseBookingForm formData={formData} setFormData={setFormData} />
+          <CruiseBookingForm formData={formData} setFormData={setFormData} headers={serviceHeaders['SH_C'] || []} />
         )}
         {currentStep === 1 && selectedService === 'SH_CC' && (
-          <CarServiceForm formData={formData} setFormData={setFormData} />
+          <CarServiceForm formData={formData} setFormData={setFormData} headers={serviceHeaders['SH_CC'] || []} />
         )}
         {currentStep === 1 && selectedService === 'SH_P' && (
-          <AirportServiceForm formData={formData} setFormData={setFormData} />
+          <AirportServiceForm formData={formData} setFormData={setFormData} headers={serviceHeaders['SH_P'] || []} />
         )}
         {currentStep === 1 && selectedService === 'SH_T' && (
-          <TourServiceForm formData={formData} setFormData={setFormData} />
+          <TourServiceForm formData={formData} setFormData={setFormData} headers={serviceHeaders['SH_T'] || []} />
         )}
         {currentStep === 1 && selectedService === 'SH_H' && (
-          <HotelServiceForm formData={formData} setFormData={setFormData} />
+          <HotelServiceForm formData={formData} setFormData={setFormData} headers={serviceHeaders['SH_H'] || []} />
         )}
         {currentStep === 1 && selectedService === 'SH_RC' && (
-          <RentalCarServiceForm formData={formData} setFormData={setFormData} />
+          <RentalCarServiceForm formData={formData} setFormData={setFormData} headers={serviceHeaders['SH_RC'] || []} />
         )}
 
         {currentStep === 2 && (
