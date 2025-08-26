@@ -39,7 +39,9 @@ function CarServiceForm({ formData, setFormData }) {
           setFormData(prev => ({ ...prev, 금액: '' }));
           return;
         }
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`);
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=car` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) {
@@ -69,7 +71,9 @@ function CarServiceForm({ formData, setFormData }) {
           setFormData(prev => ({ ...prev, 차량코드: '' }));
           return;
         }
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`);
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=car` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) {
@@ -104,7 +108,9 @@ function CarServiceForm({ formData, setFormData }) {
         const cachedSchedule = window.localStorage.getItem('schedule_value') || '';
         const cruise = formData['크루즈'] || '';
         const gubun = formData['구분'] || '';
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`);
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=car` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) return setCarTypeOptions([]);
@@ -155,9 +161,15 @@ function CarServiceForm({ formData, setFormData }) {
     setLoading(true);
     try {
       const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
+      // ensure Email is plain string
+      const emailIdx = FIXED_HEADERS.findIndex(h => h.key === 'Email');
+      if (emailIdx !== -1) {
+        const val = rowData[emailIdx];
+        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
+      }
       const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-      const useProxy = process.env.REACT_APP_USE_PROXY === 'true';
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
       const targetUrl = useProxy ? '/api/append' : appendUrl;
       if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
       const payload = { service: 'car', row: rowData };

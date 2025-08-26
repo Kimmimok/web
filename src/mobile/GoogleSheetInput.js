@@ -55,18 +55,20 @@ function MobileBookingForm() {
     serviceSpecific: {}
   });
   // 모든 서비스 컬럼값을 최초 1회만 fetch
-  React.useEffect(() => {
-    async function fetchAllHeaders() {
-      const newHeaders = {};
-      for (const [serviceId, sheetName] of Object.entries(SERVICE_SHEET_MAP)) {
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!1:1?key=${API_KEY}`);
-        const data = await res.json();
-        newHeaders[serviceId] = data.values ? data.values[0] : [];
+    React.useEffect(() => {
+      async function fetchAllHeaders() {
+        const newHeaders = {};
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+        for (const [serviceId, sheetName] of Object.entries(SERVICE_SHEET_MAP)) {
+          const url = useProxy ? `/api/append?sheet=${encodeURIComponent(sheetName)}&range=1:1` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!1:1?key=${API_KEY}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          newHeaders[serviceId] = data.values ? data.values[0] : [];
+        }
+        setServiceHeaders(newHeaders);
       }
-      setServiceHeaders(newHeaders);
-    }
-    fetchAllHeaders();
-  }, []);
+      fetchAllHeaders();
+    }, []);
 
   const services = [
     { id: 'SH_R', name: '예약자 정보', icon: '👤', color: '#10B981' },
@@ -109,15 +111,16 @@ function MobileBookingForm() {
         formData.englishName,
         formData.nickname
       ];
-      // Google Sheets API 전송 예시 (fetch 사용)
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/SH_M!A1:append?valueInputOption=USER_ENTERED&key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ values: [rowData] })
-        }
-      );
+      // append via proxy or direct append URL depending on environment; proxy will inject server token
+      const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
+      const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+      const target = useProxy ? '/api/append' : appendUrl;
+      await fetch(target, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(useProxy ? { service: 'SH_M', row: rowData } : { service: 'SH_M', row: rowData, token: appendToken })
+      });
       alert(`예약이 접수되었습니다!\n주문ID: ${formData.orderId}`);
       setFormData({
         orderId: '',
@@ -147,7 +150,9 @@ function MobileBookingForm() {
 
   // 모든 시트의 ID 자동생성 및 주문ID 자동입력 공통 함수
   const fetchOrderIds = async (sheetName) => {
-    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:A?key=${API_KEY}`);
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+    const url = useProxy ? `/api/append?sheet=${encodeURIComponent(sheetName)}&range=A:A` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:A?key=${API_KEY}`;
+    const res = await fetch(url);
     const data = await res.json();
     return (data.values || []).map(row => row[0]);
   };
@@ -169,18 +174,19 @@ function MobileBookingForm() {
   };
 
   // 주문ID 자동입력 (사용자 주문ID 불러오기)
-  const fetchUserOrderId = async (userEmail) => {
-    // 예시: SH_M 시트에서 해당 이메일의 주문ID 조회
-    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/SH_M!A:F?key=${API_KEY}`);
-    const data = await res.json();
-    if (!data.values) return '';
-    const header = data.values[0];
-    const orderIdIdx = header.indexOf('주문ID');
-    const emailIdx = header.indexOf('Email');
-    const found = data.values.find(row => row[emailIdx] === userEmail);
-    return found ? found[orderIdIdx] : '';
-  };
-
+    const fetchUserOrderId = async (userEmail) => {
+      // 예시: SH_M 시트에서 해당 이메일의 주문ID 조회
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+      const url = useProxy ? `/api/append?sheet=SH_M&range=A:F` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/SH_M!A:F?key=${API_KEY}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.values) return '';
+      const header = data.values[0];
+      const orderIdIdx = header.indexOf('주문ID');
+      const emailIdx = header.indexOf('Email');
+      const found = data.values.find(row => row[emailIdx] === userEmail);
+      return found ? found[orderIdIdx] : '';
+    };
   // 폼 초기화 시 각 시트의 ID, 주문ID 자동 입력 (공통 적용)
   React.useEffect(() => {
     async function setAutoIds() {
@@ -189,7 +195,7 @@ function MobileBookingForm() {
         const uniqueId = await generateUniqueId(sheetName);
         let userOrderId = '';
         if (formData.email) {
-          userOrderId = await fetchUserOrderId(formData.email);
+            userOrderId = await fetchUserOrderId(formData.email); // Use the updated function
         }
         setFormData(prev => ({
           ...prev,

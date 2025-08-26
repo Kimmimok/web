@@ -75,9 +75,11 @@ function CruiseBookingForm({ formData, setFormData }) {
         return;
       }
       try {
-        const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-        const API_KEY = process.env.REACT_APP_API_KEY;
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room?key=${API_KEY}`);
+  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+  const API_KEY = process.env.REACT_APP_API_KEY;
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=room` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) {
@@ -146,7 +148,9 @@ function CruiseBookingForm({ formData, setFormData }) {
       try {
         const SHEET_ID = process.env.REACT_APP_SHEET_ID;
         const API_KEY = process.env.REACT_APP_API_KEY;
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room!A:A?key=${API_KEY}`);
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=room&range=A:A` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room!A:A?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         existingIds = (data.values || []).slice(1).map(row => row[0]);
       } catch (e) {
@@ -178,9 +182,11 @@ function CruiseBookingForm({ formData, setFormData }) {
   useEffect(() => {
     async function fetchCheckinOptions() {
       try {
-        const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-        const API_KEY = process.env.REACT_APP_API_KEY;
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room?key=${API_KEY}`);
+  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+  const API_KEY = process.env.REACT_APP_API_KEY;
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=room` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) return setCheckinOptions([]);
@@ -215,9 +221,11 @@ function CruiseBookingForm({ formData, setFormData }) {
   useEffect(() => {
     async function fetchOptions() {
       try {
-        const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-        const API_KEY = process.env.REACT_APP_API_KEY;
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room?key=${API_KEY}`);
+  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+  const API_KEY = process.env.REACT_APP_API_KEY;
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=room` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) {
@@ -324,21 +332,42 @@ function CruiseBookingForm({ formData, setFormData }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // 승선도움, 커넥팅룸 저장 시 true/false로 변환
-    const saveData = { ...formData };
-    if (saveData['승선도움'] === '예') saveData['승선도움'] = true;
-    else saveData['승선도움'] = false;
-    if (saveData['커넥팅룸'] === '예') saveData['커넥팅룸'] = true;
-    else saveData['커넥팅룸'] = false;
-    // 실제 저장 로직은 필요에 따라 구현
-    setTimeout(() => {
+    try {
+      // 승선도움, 커넥팅룸 저장 시 true/false로 변환
+      const normalized = { ...formData };
+      normalized['승선도움'] = normalized['승선도움'] === '예' ? true : false;
+      normalized['커넥팅룸'] = normalized['커넥팅룸'] === '예' ? true : false;
+      const rowData = CRUISE_COLUMNS.map(col => normalized[col.key] ?? '');
+      // ensure Email is plain string
+      const emailIdx = CRUISE_COLUMNS.findIndex(h => h.key === 'Email');
+      if (emailIdx !== -1) {
+        const val = rowData[emailIdx];
+        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
+      }
+      const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
+      const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
+      const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+      const targetUrl = useProxy ? '/api/append' : appendUrl;
+      if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
+      const payload = { service: 'cruise', row: rowData };
+      if (!useProxy && appendToken) payload.token = appendToken;
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Append failed');
       alert('크루즈 예약 정보가 저장되었습니다.');
       setFormData({});
+    } catch (err) {
+      alert('저장 중 오류가 발생했습니다.');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (

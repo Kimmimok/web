@@ -67,29 +67,18 @@ function AirportServiceForm({ formData, setFormData }) {
       const carType = formData['차량종류'] || '';
       const code = formData['차량코드'] || '';
       if (type && route && carType && code) {
-        const price = await getAirportCarPrice(type, route, carType, code);
-        setFormData(prev => ({ ...prev, 금액: price }));
+        try {
+          const price = await getAirportCarPrice(type, route, carType, code);
+          setFormData(prev => ({ ...prev, 금액: price }));
+        } catch (e) {
+          setFormData(prev => ({ ...prev, 금액: '' }));
+        }
       } else {
         setFormData(prev => ({ ...prev, 금액: '' }));
       }
     }
     fetchCarPrice();
   }, [formData['분류'], formData['경로'], formData['차량종류'], formData['차량코드']]);
-  // 차량코드 자동입력: 경로/분류/차종 값이 모두 선택되면 코드값 자동 입력
-  useEffect(() => {
-    async function fetchCarCode() {
-      const type = formData['분류'] || '';
-      const route = formData['경로'] || '';
-      const carType = formData['차량종류'] || '';
-      if (type && route && carType) {
-        const code = await getAirportCarCode(type, route, carType);
-        setFormData(prev => ({ ...prev, 차량코드: code }));
-      } else {
-        setFormData(prev => ({ ...prev, 차량코드: '' }));
-      }
-    }
-    fetchCarCode();
-  }, [formData['분류'], formData['경로'], formData['차량종류']]);
   const [carTypeOptions, setCarTypeOptions] = useState([]);
   const [routeOptions, setRouteOptions] = useState([]);
   // 구분, 분류 기본값 설정
@@ -150,11 +139,17 @@ function AirportServiceForm({ formData, setFormData }) {
     setLoading(true);
     try {
       const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
+      // ensure Email is a plain string to avoid objects/JSX leaking into the sheet
+      const emailIdx = FIXED_HEADERS.findIndex(h => h.key === 'Email');
+      if (emailIdx !== -1) {
+        const val = rowData[emailIdx];
+        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
+      }
   const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
   const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN; // direct mode token
-  const useProxy = process.env.REACT_APP_USE_PROXY === 'true';
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
   const targetUrl = useProxy ? '/api/append' : appendUrl;
-      if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
+  if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
       const payload = { service: 'airport', row: rowData };
       if (!useProxy && appendToken) payload.token = appendToken;
       const res = await fetch(targetUrl, {

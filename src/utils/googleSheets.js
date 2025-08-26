@@ -1,12 +1,19 @@
-const SHEET_ID = '16bKsWL_0HkZeAbOVVntSz0ehUHRGO1PoanNhFLghvEo';
-const API_KEY = 'AIzaSyDyfByYamh-s9972-ZeVr_Fyq64jH1snrw';
+// Prefer proxy reads to avoid embedding keys in the client build.
+const SHEET_ID = process.env.REACT_APP_SHEET_ID || '';
+const API_KEY = process.env.REACT_APP_API_KEY || '';
+const USE_PROXY = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
 
 // 전체 시트 목록 가져오기
 export const fetchSheetNames = async () => {
+  if (USE_PROXY) {
+    const res = await fetch(`/api/append?sheet=__names__`);
+    const json = await res.json();
+    return (json && json.values && json.values[0]) ? json.values[0] : [];
+  }
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
-  return data.sheets.map(sheet => sheet.properties.title);
+  return data.sheets ? data.sheets.map(sheet => sheet.properties.title) : [];
 };
 
 // 모든 시트의 데이터 가져와 병합
@@ -15,9 +22,15 @@ export const fetchAllSheetsData = async () => {
   const orderMap = {};
   
   for (const name of names) {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${name}?key=${API_KEY}`;
-    const res = await fetch(url);
-    const data = await res.json();
+    let data;
+    if (USE_PROXY) {
+      const res = await fetch(`/api/append?sheet=${encodeURIComponent(name)}`);
+      data = await res.json();
+    } else {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${name}?key=${API_KEY}`;
+      const res = await fetch(url);
+      data = await res.json();
+    }
     
     if (data.values && data.values.length > 1) {
       const headers = data.values[0];
@@ -43,6 +56,11 @@ export const fetchAllSheetsData = async () => {
 
 // 특정 시트의 데이터 가져오기
 export const fetchSheetData = async (sheetName) => {
+  if (USE_PROXY) {
+    const res = await fetch(`/api/append?sheet=${encodeURIComponent(sheetName)}`);
+    const json = await res.json();
+    return (json && json.values) ? json.values : [];
+  }
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();

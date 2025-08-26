@@ -22,7 +22,8 @@ function _getProp(key, fallback) {
 function _setScriptPropsForDeploy() {
   const DEFAULT_SCRIPT_PROPS = {
     'TARGET_SHEET_ID': 'YOUR_SPREADSHEET_ID',
-    'ALLOWED_SHEETS': 'SH_H,SH_T,SH_RC,SH_C,SH_R,SH_P,SH_M',
+  // Include both internal codes and human-friendly masters used by client reads
+  'ALLOWED_SHEETS': 'SH_H,SH_T,SH_RC,SH_C,SH_R,SH_P,SH_M,hotel,car,rcar,room,tour',
     'ALLOWED_TOKEN': 'REPLACE_WITH_GLOBAL_TOKEN',
     'TOKEN_CRUISE': '',
     'TOKEN_CAR': '',
@@ -102,7 +103,44 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  try { return _json({ success: true, time: new Date(), info: 'Apps Script webapp ready' }); } catch (err) { return _json({ success: false, error: err.message }); }
+  try {
+    // Health/diagnostic probe: doGet?probe=tokenlen
+    const probe = (e && e.parameter && e.parameter.probe) ? e.parameter.probe.toString() : '';
+    if (probe === 'tokenlen') {
+      const globalToken = (_getProp('ALLOWED_TOKEN', '') || '').toString();
+      const hasGlobal = globalToken && globalToken.trim().length > 0;
+      return _json({ success: true, probe: 'tokenlen', hasGlobal: !!hasGlobal, globalLen: hasGlobal ? globalToken.trim().length : 0, time: new Date() });
+    }
+
+    // If a sheet query is provided, return that sheet's values (safe: only allowed sheets)
+    const sheetName = (e && e.parameter && e.parameter.sheet) ? e.parameter.sheet.toString() : '';
+    const range = (e && e.parameter && e.parameter.range) ? e.parameter.range.toString() : '';
+    if (sheetName) {
+      const allowedSheetsProp = _getProp('ALLOWED_SHEETS', 'SH_H,SH_T,SH_RC,SH_C,SH_R,SH_P,SH_M');
+      const allowed = allowedSheetsProp.split(',').map(s=>s.trim()).filter(Boolean);
+      const targetId = _getProp('TARGET_SHEET_ID', _getProp('REACT_APP_SHEET_ID', ''));
+      if (!targetId) return _json({ success:false, error:'no target sheet id' });
+      try {
+        const ss = SpreadsheetApp.openById(targetId);
+
+        // Special virtual sheet: __names__ -> return list of sheet names
+        if (sheetName === '__names__') {
+          const names = ss.getSheets().map(sh => sh.getName());
+          // Normalize response shape to align with client expectations: values[0] is list of names
+          return _json({ success: true, values: [names] });
+        }
+
+        if (allowed.indexOf(sheetName) === -1) return _json({ success:false, error:'forbidden sheet' });
+        const sheet = ss.getSheetByName(sheetName);
+        if (!sheet) return _json({ success:false, error:'sheet not found' });
+        const data = range ? sheet.getRange(range).getValues() : sheet.getDataRange().getValues();
+        return _json({ success:true, values: data });
+      } catch (e) {
+        return _json({ success:false, error: 'openById or read failed' });
+      }
+    }
+    return _json({ success: true, time: new Date(), info: 'Apps Script webapp ready' });
+  } catch (err) { return _json({ success: false, error: err.message }); }
 }
 
 function _json(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }

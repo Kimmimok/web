@@ -51,9 +51,11 @@ function RentalCarServiceForm({ formData, setFormData }) {
   useEffect(() => {
     async function fetchCarCode() {
       try {
-        const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-        const API_KEY = process.env.REACT_APP_API_KEY;
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`);
+  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+  const API_KEY = process.env.REACT_APP_API_KEY;
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=rcar` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) return setFormData(prev => ({ ...prev, 차량코드: '' }));
@@ -90,9 +92,11 @@ function RentalCarServiceForm({ formData, setFormData }) {
   useEffect(() => {
     async function fetchCarTypeOptions() {
       try {
-        const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-        const API_KEY = process.env.REACT_APP_API_KEY;
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`);
+  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+  const API_KEY = process.env.REACT_APP_API_KEY;
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=rcar` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`;
+  const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) return setCarTypeOptions([]);
@@ -125,7 +129,9 @@ function RentalCarServiceForm({ formData, setFormData }) {
       try {
         const SHEET_ID = process.env.REACT_APP_SHEET_ID;
         const API_KEY = process.env.REACT_APP_API_KEY;
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`);
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+        const readUrl = useProxy ? `/api/append?sheet=rcar` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`;
+        const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) return setRouteOptions([]);
@@ -186,9 +192,15 @@ function RentalCarServiceForm({ formData, setFormData }) {
     setLoading(true);
     try {
       const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
+      // ensure Email is plain string
+      const emailIdx = FIXED_HEADERS.findIndex(h => h.key === 'Email');
+      if (emailIdx !== -1) {
+        const val = rowData[emailIdx];
+        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
+      }
       const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-      const useProxy = process.env.REACT_APP_USE_PROXY === 'true';
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
       const targetUrl = useProxy ? '/api/append' : appendUrl;
       if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
       const payload = { service: 'rcar', row: rowData };

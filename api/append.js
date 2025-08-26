@@ -3,6 +3,20 @@
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
+    // Allow GET for safe reads: proxy GET?s=newsheet&range=A1:B10
+    if (req.method === 'GET') {
+      try {
+        const targetUrl = process.env.REACT_APP_SHEET_APPEND_URL;
+        if (!targetUrl) return res.status(500).json({ error: 'Target URL not configured' });
+        const qs = [];
+        if (req.query && req.query.sheet) qs.push('sheet=' + encodeURIComponent(req.query.sheet));
+        if (req.query && req.query.range) qs.push('range=' + encodeURIComponent(req.query.range));
+        const getUrl = targetUrl + (qs.length ? ('?' + qs.join('&')) : '');
+        const fetchRes = await fetch(getUrl, { method: 'GET' });
+        const text = await fetchRes.text();
+        try { return res.status(fetchRes.status).json(JSON.parse(text)); } catch (e) { return res.status(fetchRes.status).send(text); }
+      } catch (err) { console.error(err); return res.status(500).json({ error: err.message || 'internal error' }); }
+    }
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }

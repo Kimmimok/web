@@ -88,10 +88,16 @@ function ReservationForm({ formData, setFormData }) {
     setLoading(true);
     try {
       const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
+      // ensure Email is plain string
+      const emailIdx = FIXED_HEADERS.findIndex(h => h.key === 'Email');
+      if (emailIdx !== -1) {
+        const val = rowData[emailIdx];
+        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
+      }
       // 서버(또는 Apps Script 웹앱)에 서비스 키와 행 데이터를 보내도록 변경
   // Use proxy when deployed on Vercel (set REACT_APP_USE_PROXY=true),
   // otherwise use the direct APPEND URL if provided.
-  const useProxy = (process.env.REACT_APP_USE_PROXY || '').toString() === 'true';
+  const useProxy = ((process.env.REACT_APP_USE_PROXY || '').toString() === 'true') || (process.env.NODE_ENV !== 'production');
   const APPEND_URL = useProxy ? '/api/append' : process.env.REACT_APP_SHEET_APPEND_URL;
   // When using the proxy, do not include a client-side token. The proxy will inject the server token.
   const APPEND_TOKEN = useProxy ? '' : process.env.REACT_APP_SHEET_APPEND_TOKEN;

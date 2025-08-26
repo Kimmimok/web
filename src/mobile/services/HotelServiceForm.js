@@ -95,8 +95,10 @@ function HotelServiceForm({ formData, setFormData }) {
   useEffect(() => {
     async function fetchHotelNames() {
       try {
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/hotel?key=${API_KEY}`);
-        const data = await res.json();
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+  const readUrl = useProxy ? `/api/append?sheet=hotel` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/hotel?key=${API_KEY}`;
+  const res = await fetch(readUrl);
+  const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) {
           setHotelNameOptions([]);
@@ -237,11 +239,17 @@ function HotelServiceForm({ formData, setFormData }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
+      let rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
+      // Ensure Email is a plain string (avoid JSX or object leakage)
+      const emailIdx = FIXED_HEADERS.findIndex(c => c.key === 'Email');
+      if (emailIdx !== -1) {
+        const val = rowData[emailIdx];
+        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : '') : String(val || '');
+      }
       // Send to Apps Script webapp endpoint (set REACT_APP_SHEET_APPEND_URL and REACT_APP_SHEET_APPEND_TOKEN in .env)
       const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-      const useProxy = process.env.REACT_APP_USE_PROXY === 'true';
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
       const targetUrl = useProxy ? '/api/append' : appendUrl;
       if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
       const payload = { service: 'hotel', row: rowData };

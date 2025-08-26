@@ -69,10 +69,11 @@ function TourServiceForm({ formData, setFormData }) {
 
   // 투어명/투어종류 옵션 로드 (tour 시트에서 해당 컬럼 값을 목록으로)
   useEffect(() => {
-    async function fetchTourMaster() {
+  async function fetchTourMaster() {
       try {
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/tour?key=${API_KEY}`);
-        const data = await res.json();
+        // use proxy (server will forward to Apps Script) to avoid embedding API keys in builds
+    const res = await fetch(`/api/append?sheet=tour`);
+    const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) {
           setTourNameOptions([]);
@@ -256,9 +257,15 @@ function TourServiceForm({ formData, setFormData }) {
     setLoading(true);
     try {
       const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
+      // ensure Email is plain string before sending
+      const emailIdx = FIXED_HEADERS.findIndex(h => h.key === 'Email');
+      if (emailIdx !== -1) {
+        const val = rowData[emailIdx];
+        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
+      }
       const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-      const useProxy = process.env.REACT_APP_USE_PROXY === 'true';
+  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
       const targetUrl = useProxy ? '/api/append' : appendUrl;
       if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
       const payload = { service: 'tour', row: rowData };
