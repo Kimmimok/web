@@ -385,6 +385,40 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Header styles */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: linear-gradient(90deg, #0ea5ff, #0077cc);
+  height: 64px; /* taller header */
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.header-inner {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 12px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  margin: 0;
+}
+
+/* Ensure main content sits directly below header with no extra gap */
+.app-main {
+  margin-top: 0;
+  padding-top: 0;
+}
+
 /* Responsive Design */
 @media (max-width: 480px) {
   .mobile-booking-form {
