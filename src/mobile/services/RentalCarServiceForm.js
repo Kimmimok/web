@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchSheetData } from '../../utils/googleSheets';
+import { buildIndexMap } from '../../utils/headerUtils';
 
 const FIXED_HEADERS = [
   { key: 'ID', label: 'ID', type: 'text', required: false },
@@ -51,29 +53,25 @@ function RentalCarServiceForm({ formData, setFormData }) {
   useEffect(() => {
     async function fetchCarCode() {
       try {
-  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-  const API_KEY = process.env.REACT_APP_API_KEY;
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
-  const readUrl = useProxy ? `/api/append?sheet=rcar` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`;
-  const res = await fetch(readUrl);
-        const data = await res.json();
-        const rows = data.values || [];
+  const rows = await fetchSheetData('rcar');
         if (rows.length < 2) return setFormData(prev => ({ ...prev, 차량코드: '' }));
         const header = rows[0];
-        const idxCode = header.indexOf('코드');
-        const idxGubun = header.indexOf('구분');
-        const idxBunryu = header.indexOf('분류');
-        const idxRoute = header.indexOf('경로');
-        const idxType = header.indexOf('차종');
-        if ([idxCode, idxGubun, idxBunryu, idxRoute, idxType].includes(-1)) return setFormData(prev => ({ ...prev, 차량코드: '' }));
+        const idx = buildIndexMap(header, {
+          code: ['코드', '차량코드', 'code'],
+          gubun: ['구분', 'gubun'],
+          bunryu: ['분류', 'category'],
+          route: ['경로', '노선', 'route'],
+          type: ['차종', '차량종류', '차량타입', 'type']
+        });
+        if ([idx.code, idx.gubun, idx.bunryu, idx.route, idx.type].some(v => v === -1)) return setFormData(prev => ({ ...prev, 차량코드: '' }));
         const found = rows.slice(1).find(row => {
-          return row[idxGubun] === formData['구분'] &&
-                 row[idxBunryu] === formData['분류'] &&
-                 row[idxRoute] === formData['경로'] &&
-                 row[idxType] === formData['차량종류'];
+          return (row[idx.gubun] || '') === formData['구분'] &&
+                 (row[idx.bunryu] || '') === formData['분류'] &&
+                 (row[idx.route] || '') === formData['경로'] &&
+                 (row[idx.type] || '') === formData['차량종류'];
         });
         if (found) {
-          setFormData(prev => ({ ...prev, 차량코드: found[idxCode] }));
+          setFormData(prev => ({ ...prev, 차량코드: found[idx.code] || '' }));
         } else {
           setFormData(prev => ({ ...prev, 차량코드: '' }));
         }
@@ -92,25 +90,21 @@ function RentalCarServiceForm({ formData, setFormData }) {
   useEffect(() => {
     async function fetchCarTypeOptions() {
       try {
-  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-  const API_KEY = process.env.REACT_APP_API_KEY;
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
-  const readUrl = useProxy ? `/api/append?sheet=rcar` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`;
-  const res = await fetch(readUrl);
-        const data = await res.json();
-        const rows = data.values || [];
+        const rows = await fetchSheetData('rcar');
         if (rows.length < 2) return setCarTypeOptions([]);
         const header = rows[0];
-        const idxType = header.indexOf('차종');
-        const idxGubun = header.indexOf('구분');
-        const idxBunryu = header.indexOf('분류');
-        const idxRoute = header.indexOf('경로');
-        if (idxType === -1 || idxGubun === -1 || idxBunryu === -1 || idxRoute === -1) return setCarTypeOptions([]);
+        const idx = buildIndexMap(header, {
+          type: ['차종', '차량종류', '차량타입', 'type'],
+          gubun: ['구분', 'gubun'],
+          bunryu: ['분류', 'category'],
+          route: ['경로', '노선', 'route']
+        });
+        if (idx.type === -1 || idx.gubun === -1 || idx.bunryu === -1 || idx.route === -1) return setCarTypeOptions([]);
         // 조건 필터링
         let filtered = rows.slice(1).filter(row => {
-          return row[idxGubun] === formData['구분'] && row[idxBunryu] === formData['분류'] && row[idxRoute] === formData['경로'];
+          return (row[idx.gubun] || '') === formData['구분'] && (row[idx.bunryu] || '') === formData['분류'] && (row[idx.route] || '') === formData['경로'];
         });
-        const typeRaw = filtered.map(row => row[idxType]).filter(v => v);
+        const typeRaw = filtered.map(row => row[idx.type]).filter(v => v);
         setCarTypeOptions(Array.from(new Set(typeRaw)));
       } catch (e) {
         setCarTypeOptions([]);
@@ -127,24 +121,20 @@ function RentalCarServiceForm({ formData, setFormData }) {
   useEffect(() => {
     async function fetchRouteOptions() {
       try {
-        const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-        const API_KEY = process.env.REACT_APP_API_KEY;
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
-        const readUrl = useProxy ? `/api/append?sheet=rcar` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/rcar?key=${API_KEY}`;
-        const res = await fetch(readUrl);
-        const data = await res.json();
-        const rows = data.values || [];
+        const rows = await fetchSheetData('rcar');
         if (rows.length < 2) return setRouteOptions([]);
         const header = rows[0];
-        const idxRoute = header.indexOf('경로');
-        const idxGubun = header.indexOf('구분');
-        const idxBunryu = header.indexOf('분류');
-        if (idxRoute === -1 || idxGubun === -1 || idxBunryu === -1) return setRouteOptions([]);
+        const idx = buildIndexMap(header, {
+          route: ['경로', '노선', 'route'],
+          gubun: ['구분', 'gubun'],
+          bunryu: ['분류', 'category']
+        });
+        if (idx.route === -1 || idx.gubun === -1 || idx.bunryu === -1) return setRouteOptions([]);
         // 조건 필터링
         let filtered = rows.slice(1).filter(row => {
-          return row[idxGubun] === formData['구분'] && row[idxBunryu] === formData['분류'];
+          return (row[idx.gubun] || '') === formData['구분'] && (row[idx.bunryu] || '') === formData['분류'];
         });
-        const routeRaw = filtered.map(row => row[idxRoute]).filter(v => v);
+        const routeRaw = filtered.map(row => row[idx.route]).filter(v => v);
         setRouteOptions(Array.from(new Set(routeRaw)));
       } catch (e) {
         setRouteOptions([]);

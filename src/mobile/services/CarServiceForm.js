@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchSheetData } from '../../utils/googleSheets';
+import { buildIndexMap } from '../../utils/headerUtils';
 
 const FIXED_HEADERS = [
   { key: 'ID', label: 'ID', type: 'text', required: false },
@@ -20,8 +22,7 @@ const FIXED_HEADERS = [
   { key: 'Email', label: '이메일 주소', type: 'email', required: true }
 ];
 
-const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-const API_KEY = process.env.REACT_APP_API_KEY;
+// reading uses proxy-aware fetchSheetData; no direct API keys here
 
 function CarServiceForm({ formData, setFormData }) {
   // 차량수 기본값 1로 설정
@@ -39,20 +40,22 @@ function CarServiceForm({ formData, setFormData }) {
           setFormData(prev => ({ ...prev, 금액: '' }));
           return;
         }
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
-  const readUrl = useProxy ? `/api/append?sheet=car` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`;
-  const res = await fetch(readUrl);
-        const data = await res.json();
-        const rows = data.values || [];
+        const rows = await fetchSheetData('car');
         if (rows.length < 2) {
           setFormData(prev => ({ ...prev, 금액: '' }));
           return;
         }
         const header = rows[0];
-        const idxCode = header.indexOf('코드');
-        const idxAmount = header.indexOf('금액');
-        const found = rows.slice(1).find(row => row[idxCode] === code);
-        setFormData(prev => ({ ...prev, 금액: found ? found[idxAmount] : '' }));
+        const idx = buildIndexMap(header, {
+          code: ['코드', '차량코드', 'code'],
+          amount: ['금액', 'amount']
+        });
+        if (idx.code === -1 || idx.amount === -1) {
+          setFormData(prev => ({ ...prev, 금액: '' }));
+          return;
+        }
+        const found = rows.slice(1).find(row => (row[idx.code] || '') === code);
+        setFormData(prev => ({ ...prev, 금액: found ? (found[idx.amount] || '') : '' }));
       } catch (e) {
         setFormData(prev => ({ ...prev, 금액: '' }));
       }
@@ -71,28 +74,26 @@ function CarServiceForm({ formData, setFormData }) {
           setFormData(prev => ({ ...prev, 차량코드: '' }));
           return;
         }
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
-  const readUrl = useProxy ? `/api/append?sheet=car` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`;
-  const res = await fetch(readUrl);
-        const data = await res.json();
-        const rows = data.values || [];
+        const rows = await fetchSheetData('car');
         if (rows.length < 2) {
           setFormData(prev => ({ ...prev, 차량코드: '' }));
           return;
         }
         const header = rows[0];
-        const idxGubun = header.indexOf('구분');
-        const idxSchedule = header.indexOf('일정');
-        const idxCruise = header.indexOf('크루즈');
-        const idxType = header.indexOf('종류');
-        const idxCode = header.indexOf('코드');
+        const idx = buildIndexMap(header, {
+          gubun: ['구분', 'gubun'],
+          schedule: ['일정', 'schedule'],
+          cruise: ['크루즈', 'cruise'],
+          type: ['종류', '차량종류', '차종', 'type'],
+          code: ['코드', '차량코드', 'code']
+        });
         const found = rows.slice(1).find(row =>
-          row[idxGubun] === gubun &&
-          row[idxSchedule] === cachedSchedule &&
-          row[idxCruise] === cruise &&
-          row[idxType] === type
+          (idx.gubun === -1 || (row[idx.gubun] || '') === gubun) &&
+          (idx.schedule === -1 || (row[idx.schedule] || '') === cachedSchedule) &&
+          (idx.cruise === -1 || (row[idx.cruise] || '') === cruise) &&
+          (idx.type === -1 || (row[idx.type] || '') === type)
         );
-        setFormData(prev => ({ ...prev, 차량코드: found ? found[idxCode] : '' }));
+        setFormData(prev => ({ ...prev, 차량코드: (found && idx.code !== -1) ? (found[idx.code] || '') : '' }));
       } catch (e) {
         setFormData(prev => ({ ...prev, 차량코드: '' }));
       }
@@ -108,23 +109,21 @@ function CarServiceForm({ formData, setFormData }) {
         const cachedSchedule = window.localStorage.getItem('schedule_value') || '';
         const cruise = formData['크루즈'] || '';
         const gubun = formData['구분'] || '';
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
-  const readUrl = useProxy ? `/api/append?sheet=car` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/car?key=${API_KEY}`;
-  const res = await fetch(readUrl);
-        const data = await res.json();
-        const rows = data.values || [];
+        const rows = await fetchSheetData('car');
         if (rows.length < 2) return setCarTypeOptions([]);
         const header = rows[0];
-        const idxGubun = header.indexOf('구분');
-        const idxSchedule = header.indexOf('일정');
-        const idxCruise = header.indexOf('크루즈');
-        const idxType = header.indexOf('종류');
+        const idx = buildIndexMap(header, {
+          gubun: ['구분', 'gubun'],
+          schedule: ['일정', 'schedule'],
+          cruise: ['크루즈', 'cruise'],
+          type: ['종류', '차량종류', '차종', 'type']
+        });
         let filtered = rows.slice(1);
-        if (idxGubun !== -1 && gubun) filtered = filtered.filter(row => row[idxGubun] === gubun);
-        if (idxSchedule !== -1 && cachedSchedule) filtered = filtered.filter(row => row[idxSchedule] === cachedSchedule);
-        if (idxCruise !== -1 && cruise) filtered = filtered.filter(row => row[idxCruise] === cruise);
-        if (idxType !== -1) {
-          const types = filtered.map(row => row[idxType]).filter(v => v);
+        if (idx.gubun !== -1 && gubun) filtered = filtered.filter(row => (row[idx.gubun] || '') === gubun);
+        if (idx.schedule !== -1 && cachedSchedule) filtered = filtered.filter(row => (row[idx.schedule] || '') === cachedSchedule);
+        if (idx.cruise !== -1 && cruise) filtered = filtered.filter(row => (row[idx.cruise] || '') === cruise);
+        if (idx.type !== -1) {
+          const types = filtered.map(row => row[idx.type]).filter(v => v);
           setCarTypeOptions(Array.from(new Set(types)));
         } else {
           setCarTypeOptions([]);

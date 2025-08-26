@@ -4,25 +4,62 @@
 let fetchFn = global.fetch;
 if (!fetchFn) {
   try { fetchFn = require('node-fetch'); } catch (e) {
-    throw new Error('Global fetch is unavailable. Use Node >= 18 or install node-fetch.');
+    // Will work after installing node-fetch@2 in dev
+    throw new Error('Global fetch is unavailable. Install node-fetch (v2) or use Node >= 18.');
   }
 }
 
 module.exports = function(app) {
-  // JSON body 파싱 미들웨어 (필요 시)
-  app.use(require('express').json());
 
   app.get('/api/append', async (req, res) => {
     try {
       const targetUrl = process.env.REACT_APP_SHEET_APPEND_URL;
-      if (!targetUrl) return res.status(500).json({ error: 'Target URL not configured' });
       const params = new URLSearchParams();
       if (req.query.sheet) params.set('sheet', req.query.sheet);
       if (req.query.range) params.set('range', req.query.range);
-      const url = targetUrl + (params.toString() ? `?${params.toString()}` : '');
-      const r = await fetchFn(url, { method: 'GET' });
-      const text = await r.text();
-      try { return res.status(r.status).json(JSON.parse(text)); } catch (_) { return res.status(r.status).send(text); }
+
+      // Try Apps Script first if configured
+      let json = null;
+      if (targetUrl) {
+        try {
+          const url = targetUrl + (params.toString() ? `?${params.toString()}` : '');
+          const r = await fetchFn(url, { method: 'GET' });
+          const text = await r.text();
+          try { json = JSON.parse(text); } catch (_) { json = null; }
+          if (json && json.values) {
+            return res.status(r.status).json(json);
+          }
+        } catch (_) {
+          // ignore and fallback
+        }
+      }
+
+      // Fallback: read directly from Google Sheets API in dev
+      const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+      const API_KEY = process.env.REACT_APP_API_KEY;
+      const sheetName = req.query.sheet;
+      const range = req.query.range;
+      if (SHEET_ID && API_KEY && sheetName) {
+        try {
+          if (sheetName === '__names__') {
+            const namesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`;
+            const rr = await fetchFn(namesUrl, { method: 'GET' });
+            const data = await rr.json();
+            const names = (data.sheets || []).map(sh => sh.properties && sh.properties.title).filter(Boolean);
+            return res.status(200).json({ values: [names] });
+          }
+          const encoded = encodeURIComponent(sheetName + (range ? `!${range}` : ''));
+          const valuesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encoded}?key=${API_KEY}`;
+          const rr = await fetchFn(valuesUrl, { method: 'GET' });
+          const data = await rr.json();
+          return res.status(200).json({ values: data.values || [] });
+        } catch (fallbackErr) {
+          // fall through to original response
+        }
+      }
+      // Default: if we had Apps Script JSON without values
+      if (json) return res.status(200).json(json);
+      return res.status(500).json({ error: 'No data available' });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message || 'internal error' });
@@ -33,18 +70,29 @@ module.exports = function(app) {
     try {
       const targetUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       if (!targetUrl) return res.status(500).json({ error: 'Target URL not configured' });
-      const incoming = req.body && typeof req.body === 'object' ? { ...req.body } : {};
-      if (!incoming.token) {
-        const serverToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-        if (serverToken) incoming.token = serverToken;
-      }
-      const r = await fetchFn(targetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(incoming)
+      // Manual JSON parse to avoid requiring express.json()
+      let raw = '';
+      req.on('data', chunk => { raw += chunk; });
+      req.on('end', async () => {
+        try {
+          let incoming = {};
+          try { incoming = raw ? JSON.parse(raw) : {}; } catch (_) { incoming = {}; }
+          if (!incoming.token) {
+            const serverToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
+            if (serverToken) incoming.token = serverToken;
+          }
+          const r = await fetchFn(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(incoming)
+          });
+          const text = await r.text();
+          try { return res.status(r.status).json(JSON.parse(text)); } catch (_) { return res.status(r.status).send(text); }
+        } catch (innerErr) {
+          console.error(innerErr);
+          return res.status(500).json({ error: innerErr.message || 'internal error' });
+        }
       });
-      const text = await r.text();
-      try { return res.status(r.status).json(JSON.parse(text)); } catch (_) { return res.status(r.status).send(text); }
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message || 'internal error' });

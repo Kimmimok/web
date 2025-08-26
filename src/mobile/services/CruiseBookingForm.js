@@ -86,16 +86,18 @@ function CruiseBookingForm({ formData, setFormData }) {
           setFormData(prev => ({ ...prev, 객실코드: '', 금액: '' }));
           return;
         }
-        const header = rows[0];
-        const idxStartDate = header.indexOf('시작일자');
-        const idxEndDate = header.indexOf('끝일자');
-        const idxSchedule = header.indexOf('일정');
-        const idxCruise = header.indexOf('크루즈');
-        const idxRoomType = header.indexOf('종류');
-        const idxGubun = header.indexOf('구분');
-        const idxRemark = header.indexOf('객실비고') !== -1 ? header.indexOf('객실비고') : header.indexOf('비고');
-        const idxCode = header.indexOf('코드');
-        const idxAmount = header.indexOf('금액');
+  const header = rows[0].map(h => (h || '').toString().trim());
+  const headerLower = header.map(h => h.toLowerCase());
+  const findIndexCI = (targets) => headerLower.findIndex(h => targets.some(t => h === t));
+  const idxStartDate = findIndexCI(['시작일자', 'startdate', 'start']);
+  const idxEndDate = findIndexCI(['끝일자', 'enddate', 'end']);
+  const idxSchedule = findIndexCI(['일정', 'schedule']);
+  const idxCruise = findIndexCI(['크루즈', '크루즈명', 'cruise']);
+  const idxRoomType = findIndexCI(['종류', 'type']);
+  const idxGubun = findIndexCI(['구분', 'gubun']);
+  const idxRemark = findIndexCI(['객실비고', '비고', 'remark']);
+  const idxCode = findIndexCI(['코드', 'code']);
+  const idxAmount = findIndexCI(['금액', 'amount']);
         if ([idxStartDate, idxEndDate, idxSchedule, idxCruise, idxRoomType, idxGubun, idxRemark, idxCode, idxAmount].includes(-1)) {
           setFormData(prev => ({ ...prev, 객실코드: '', 금액: '' }));
           return;
@@ -130,11 +132,12 @@ function CruiseBookingForm({ formData, setFormData }) {
   }, [formData['체크인'], formData['일정'], formData['크루즈'], formData['객실종류'], formData['구분'], formData['객실비고']]);
   const [loading, setLoading] = useState(false);
   const [checkinOptions, setCheckinOptions] = useState([]);
-  const [scheduleOptions, setScheduleOptions] = useState([]);
   const [gubunOptions, setGubunOptions] = useState([]);
   const [cruiseOptions, setCruiseOptions] = useState([]);
   const [roomTypeOptions, setRoomTypeOptions] = useState([]);
   const [remarkOptions, setRemarkOptions] = useState([]);
+  // 일정 옵션은 하드코딩
+  const scheduleOptions = ["1박2일", "2박3일", "당일"];
   const navigate = useNavigate();
 
   // ID 자동생성, 주문ID 자동입력 (최초 렌더링 시)
@@ -190,10 +193,12 @@ function CruiseBookingForm({ formData, setFormData }) {
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) return setCheckinOptions([]);
-        const header = rows[0];
-        const idxStartDate = header.indexOf('시작일자');
-        const idxEndDate = header.indexOf('끝일자');
-        if (idxStartDate === -1 || idxEndDate === -1) return setCheckinOptions([]);
+  const header = rows[0].map(h => (h || '').toString().trim());
+  const headerLower = header.map(h => h.toLowerCase());
+  const findIndexCI = (targets) => headerLower.findIndex(h => targets.some(t => h === t));
+  const idxStartDate = findIndexCI(['시작일자', 'startdate', 'start']);
+  const idxEndDate = findIndexCI(['끝일자', 'enddate', 'end']);
+  if (idxStartDate === -1 || idxEndDate === -1) return setCheckinOptions([]);
         // 헤더 제외, 시작~끝일자 구간의 모든 날짜 추출
         const dateSet = new Set();
         rows.slice(1).forEach(row => {
@@ -217,108 +222,77 @@ function CruiseBookingForm({ formData, setFormData }) {
     fetchCheckinOptions();
   }, []);
 
-  // 일정/크루즈 선택 시 room 시트에서 해당 조건으로 구분/크루즈/객실종류 유일값만 옵션으로 표시
+  // room 시트에서 크루즈 컬럼만 동적으로 가져옴
   useEffect(() => {
-    async function fetchOptions() {
+    async function fetchCruiseOptions() {
       try {
-  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-  const API_KEY = process.env.REACT_APP_API_KEY;
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
-  const readUrl = useProxy ? `/api/append?sheet=room` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room?key=${API_KEY}`;
-  const res = await fetch(readUrl);
+        const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+        const API_KEY = process.env.REACT_APP_API_KEY;
+        const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+        const readUrl = useProxy ? `/api/append?sheet=room` : `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/room?key=${API_KEY}`;
+        const res = await fetch(readUrl);
         const data = await res.json();
         const rows = data.values || [];
         if (rows.length < 2) {
-          setScheduleOptions([]);
-          setGubunOptions([]);
           setCruiseOptions([]);
-          setRoomTypeOptions([]);
-          setRemarkOptions([]);
           return;
         }
-        const header = rows[0];
-        const idxSchedule = header.indexOf('일정');
-        const idxGubun = header.indexOf('구분');
-        const idxCruise = header.indexOf('크루즈');
-        const idxRoomType = header.indexOf('종류');
-        const idxRemark = header.indexOf('비고');
-        const idxStartDate = header.indexOf('시작일자');
-        const idxEndDate = header.indexOf('끝일자');
-        // 일정 조건: 체크인 날짜가 시작~끝일자 사이에 있는 row의 일정값만 표시
-        let filteredSchedule = rows.slice(1);
-        if (formData['체크인'] && idxStartDate !== -1 && idxEndDate !== -1) {
-          filteredSchedule = filteredSchedule.filter(row => {
-            const start = row[idxStartDate];
-            const end = row[idxEndDate];
-            return start && end && start <= formData['체크인'] && formData['체크인'] <= end;
-          });
-        }
-        if (idxSchedule !== -1) {
-          const scheduleRaw = filteredSchedule.map(row => row[idxSchedule]).filter(v => v);
-          setScheduleOptions(Array.from(new Set(scheduleRaw)));
-        } else {
-          setScheduleOptions([]);
-        }
-        // 기존 필터링 로직 (일정, 크루즈, 객실종류, 구분, 객실비고)
-        let filtered = rows.slice(1);
-        if (formData['일정']) {
-          filtered = filtered.filter(row => row[idxSchedule] === formData['일정']);
-        }
-        let filteredRoomType = filtered;
-        if (formData['크루즈']) {
-          filteredRoomType = filteredRoomType.filter(row => row[idxCruise] === formData['크루즈']);
-        }
-        let filteredGubun = filtered;
-        if (formData['크루즈']) {
-          filteredGubun = filteredGubun.filter(row => row[idxCruise] === formData['크루즈']);
-        }
-        if (formData['객실종류']) {
-          filteredGubun = filteredGubun.filter(row => row[idxRoomType] === formData['객실종류']);
-        }
-        if (idxGubun !== -1) {
-          const gubunRaw = filteredGubun.map(row => row[idxGubun]).filter(v => v);
-          setGubunOptions(Array.from(new Set(gubunRaw)));
-        } else {
-          setGubunOptions([]);
-        }
-        if (idxCruise !== -1) {
-          const cruiseRaw = filtered.map(row => row[idxCruise]).filter(v => v);
-          setCruiseOptions(Array.from(new Set(cruiseRaw)).sort());
-        } else {
+        const header = rows[0].map(h => (h || '').toString().trim());
+        const headerLower = header.map(h => h.toLowerCase());
+        const findIndexCI = targets => headerLower.findIndex(h => targets.some(t => h === t));
+        const idxCruise = findIndexCI(['크루즈', '크루즈명', 'cruise']);
+        const idxSchedule = findIndexCI(['일정', 'schedule']);
+        const idxStartDate = findIndexCI(['시작일자', 'startdate', 'start']);
+        const idxEndDate = findIndexCI(['끝일자', 'enddate', 'end']);
+        if (idxCruise === -1) {
           setCruiseOptions([]);
+          return;
         }
-        if (idxRoomType !== -1) {
-          const roomTypeRaw = filteredRoomType.map(row => row[idxRoomType]).filter(v => v);
-          setRoomTypeOptions(Array.from(new Set(roomTypeRaw)).sort());
-        } else {
-          setRoomTypeOptions([]);
+  // 일정, 체크인(시작~끝)으로 필터
+  const filtered = rows.slice(1).filter(row => {
+          // 일정 필터
+          if (idxSchedule !== -1 && formData['일정']) {
+            const v = (row[idxSchedule] || '').toString();
+            if (v !== formData['일정']) return false;
+          }
+          // 체크인 날짜가 주어졌으면 시작일자~끝일자 사이인지 확인 (날짜 문자열/Date 처리)
+          if (formData['체크인'] && idxStartDate !== -1 && idxEndDate !== -1) {
+            const startRaw = row[idxStartDate];
+            const endRaw = row[idxEndDate];
+            const toIso = val => {
+              if (!val && val !== 0) return '';
+              try {
+                const d = new Date(val);
+                if (isNaN(d.getTime())) return (val || '').toString();
+                return d.toISOString().slice(0,10);
+              } catch (e) { return (val || '').toString(); }
+            };
+            const start = toIso(startRaw);
+            const end = toIso(endRaw);
+            const checkin = formData['체크인'];
+            if (!(start && end && start <= checkin && checkin <= end)) return false;
+          }
+          return true;
+        });
+        const cruiseRaw = filtered.map(row => row[idxCruise]).filter(v => v);
+        setCruiseOptions(Array.from(new Set(cruiseRaw)).sort());
+        // 추가: 선택된 일정/크루즈 기반으로 구분/객실종류/비고 옵션도 채움
+        const idxGubun = findIndexCI(['구분','gubun']);
+        const idxRoomType = findIndexCI(['종류','type']);
+        const idxRemark = findIndexCI(['객실비고','비고','remark']);
+        let rowsForOthers = filtered;
+        if (formData['크루즈'] && idxCruise !== -1) {
+          rowsForOthers = rowsForOthers.filter(r => (r[idxCruise] || '').toString() === formData['크루즈']);
         }
-        let filteredRemark = filtered;
-        if (formData['크루즈']) {
-          filteredRemark = filteredRemark.filter(row => row[idxCruise] === formData['크루즈']);
-        }
-        if (formData['객실종류']) {
-          filteredRemark = filteredRemark.filter(row => row[idxRoomType] === formData['객실종류']);
-        }
-        if (formData['구분']) {
-          filteredRemark = filteredRemark.filter(row => row[idxGubun] === formData['구분']);
-        }
-        if (idxRemark !== -1) {
-          const remarkRaw = filteredRemark.map(row => row[idxRemark]).filter(v => v);
-          setRemarkOptions(Array.from(new Set(remarkRaw)));
-        } else {
-          setRemarkOptions([]);
-        }
+        if (idxGubun !== -1) setGubunOptions(Array.from(new Set(rowsForOthers.map(r => r[idxGubun]).filter(Boolean))));
+        if (idxRoomType !== -1) setRoomTypeOptions(Array.from(new Set(rowsForOthers.map(r => r[idxRoomType]).filter(Boolean))));
+        if (idxRemark !== -1) setRemarkOptions(Array.from(new Set(rowsForOthers.map(r => r[idxRemark]).filter(Boolean))));
       } catch (e) {
-        setScheduleOptions([]);
-        setGubunOptions([]);
         setCruiseOptions([]);
-        setRoomTypeOptions([]);
       }
     }
-    // 일정 드롭다운은 체크인 조건에 따라 항상 fetch
-    fetchOptions();
-  }, [formData['체크인'], formData['일정'], formData['크루즈']]);
+    fetchCruiseOptions();
+  }, [formData['체크인'], formData['일정']]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -513,7 +487,7 @@ function CruiseBookingForm({ formData, setFormData }) {
                   value={formData['구분'] || ''}
                   onChange={e => handleInputChange('구분', e.target.value)}
                   required={col.required}
-                  disabled={!formData['일정']}
+                  disabled={gubunOptions.length === 0}
                 >
                   <option value="">구분 선택</option>
                   {gubunOptions.map((opt, i) => (
@@ -526,7 +500,7 @@ function CruiseBookingForm({ formData, setFormData }) {
                   value={formData['크루즈'] || ''}
                   onChange={e => handleInputChange('크루즈', e.target.value)}
                   required={col.required}
-                  disabled={!formData['일정']}
+                  disabled={cruiseOptions.length === 0}
                 >
                   <option value="">크루즈 선택</option>
                   {cruiseOptions.map((opt, i) => (
@@ -539,7 +513,7 @@ function CruiseBookingForm({ formData, setFormData }) {
                   value={formData['객실종류'] || ''}
                   onChange={e => handleInputChange('객실종류', e.target.value)}
                   required={col.required}
-                  disabled={!(formData['일정'] && formData['크루즈'])}
+                  disabled={roomTypeOptions.length === 0}
                 >
                   <option value="">객실종류 선택</option>
                   {roomTypeOptions.map((opt, i) => (
