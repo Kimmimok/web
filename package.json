@@ -1,7 +1,7 @@
 {
-  "name": "quote-management-app",
+  "name": "mobile-booking-form",
   "version": "1.0.0",
-  "description": "견적 예약 관리 시스템",
+  "description": "모바일 예약 폼 시스템",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
@@ -11,14 +11,11 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "build": "react-scripts build"
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "react-app"
     ]
   },
   "browserslist": {
@@ -32,8 +29,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "eslint-config-react-app": "^7.0.1"
   }
 }

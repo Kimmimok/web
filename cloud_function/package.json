@@ -1,8 +1,0 @@
-{
-  "name": "sheets-append-fn",
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "googleapis": "^121.0.0"
-  }
-}
