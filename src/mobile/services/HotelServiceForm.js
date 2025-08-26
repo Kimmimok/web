@@ -226,7 +226,7 @@ function HotelServiceForm({ formData, setFormData }) {
     const c = Number(formData['CHILD'] || 0);
     const t = Number(formData['TOODLER'] || 0);
     const total = a + c + t;
-    setFormData(prev => ({ ...prev, ['투숙인원 비고']: total }));
+    setFormData(prev => ({ ...prev, '투숙인원 비고': total }));
   }, [formData['ADULT'], formData['CHILD'], formData['TOODLER']]);
 
   const handleInputChange = (field, value) => {
