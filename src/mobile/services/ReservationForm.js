@@ -93,12 +93,15 @@ function ReservationForm({ formData, setFormData }) {
   // otherwise use the direct APPEND URL if provided.
   const useProxy = (process.env.REACT_APP_USE_PROXY || '').toString() === 'true';
   const APPEND_URL = useProxy ? '/api/append' : process.env.REACT_APP_SHEET_APPEND_URL;
-  const APPEND_TOKEN = process.env.REACT_APP_SHEET_APPEND_TOKEN;
+  // When using the proxy, do not include a client-side token. The proxy will inject the server token.
+  const APPEND_TOKEN = useProxy ? '' : process.env.REACT_APP_SHEET_APPEND_TOKEN;
   if (!APPEND_URL) throw new Error('REACT_APP_SHEET_APPEND_URL or proxy must be configured.');
-  const res = await fetch(APPEND_URL, {
+      const payload = { service: 'user', row: rowData };
+      if (APPEND_TOKEN) payload.token = APPEND_TOKEN;
+      const res = await fetch(APPEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service: 'user', row: rowData, token: APPEND_TOKEN })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) {
         const txt = await res.text().catch(() => '');

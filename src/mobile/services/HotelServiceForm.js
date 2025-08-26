@@ -241,9 +241,12 @@ function HotelServiceForm({ formData, setFormData }) {
       // Send to Apps Script webapp endpoint (set REACT_APP_SHEET_APPEND_URL and REACT_APP_SHEET_APPEND_TOKEN in .env)
       const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-      if (!appendUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
-      const payload = { service: 'hotel', row: rowData, token: appendToken };
-      const res = await fetch(appendUrl, {
+      const useProxy = process.env.REACT_APP_USE_PROXY === 'true';
+      const targetUrl = useProxy ? '/api/append' : appendUrl;
+      if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
+      const payload = { service: 'hotel', row: rowData };
+      if (!useProxy && appendToken) payload.token = appendToken;
+      const res = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
