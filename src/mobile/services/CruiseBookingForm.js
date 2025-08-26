@@ -314,13 +314,14 @@ function CruiseBookingForm({ formData, setFormData }) {
       const normalized = { ...formData };
       normalized['승선도움'] = normalized['승선도움'] === '예' ? true : false;
       normalized['커넥팅룸'] = normalized['커넥팅룸'] === '예' ? true : false;
-      const rowData = CRUISE_COLUMNS.map(col => normalized[col.key] ?? '');
-      // ensure Email is plain string
-      const emailIdx = CRUISE_COLUMNS.findIndex(h => h.key === 'Email');
-      if (emailIdx !== -1) {
-        const val = rowData[emailIdx];
-        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
-      }
+      
+      // 직접 CRUISE_COLUMNS 순서로 데이터 배열 생성 (빠르고 간단)
+      const rowData = CRUISE_COLUMNS.map(col => {
+        const value = normalized[col.key] || '';
+        // Email은 문자열로 변환하여 객체가 들어가지 않도록 함
+        return col.key === 'Email' ? String(value) : value;
+      });
+      
       const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
       const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
@@ -338,7 +339,8 @@ function CruiseBookingForm({ formData, setFormData }) {
       alert('크루즈 예약 정보가 저장되었습니다.');
       setFormData({});
     } catch (err) {
-      alert('저장 중 오류가 발생했습니다.');
+      console.error('Save error:', err);
+      alert('저장 중 오류가 발생했습니다: ' + (err.message || ''));
     } finally {
       setLoading(false);
     }

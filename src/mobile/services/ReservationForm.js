@@ -87,21 +87,21 @@ function ReservationForm({ formData, setFormData }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
-      // ensure Email is plain string
-      const emailIdx = FIXED_HEADERS.findIndex(h => h.key === 'Email');
-      if (emailIdx !== -1) {
-        const val = rowData[emailIdx];
-        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
-      }
+      // 직접 FIXED_HEADERS 순서로 데이터 배열 생성 (빠르고 간단)
+      const rowData = FIXED_HEADERS.map(col => {
+        const value = formData[col.key] || '';
+        // Email은 문자열로 변환하여 객체가 들어가지 않도록 함
+        return col.key === 'Email' ? String(value) : value;
+      });
+      
       // 서버(또는 Apps Script 웹앱)에 서비스 키와 행 데이터를 보내도록 변경
-  // Use proxy when deployed on Vercel (set REACT_APP_USE_PROXY=true),
-  // otherwise use the direct APPEND URL if provided.
-  const useProxy = ((process.env.REACT_APP_USE_PROXY || '').toString() === 'true') || (process.env.NODE_ENV !== 'production');
-  const APPEND_URL = useProxy ? '/api/append' : process.env.REACT_APP_SHEET_APPEND_URL;
-  // When using the proxy, do not include a client-side token. The proxy will inject the server token.
-  const APPEND_TOKEN = useProxy ? '' : process.env.REACT_APP_SHEET_APPEND_TOKEN;
-  if (!APPEND_URL) throw new Error('REACT_APP_SHEET_APPEND_URL or proxy must be configured.');
+      // Use proxy when deployed on Vercel (set REACT_APP_USE_PROXY=true),
+      // otherwise use the direct APPEND URL if provided.
+      const useProxy = ((process.env.REACT_APP_USE_PROXY || '').toString() === 'true') || (process.env.NODE_ENV !== 'production');
+      const APPEND_URL = useProxy ? '/api/append' : process.env.REACT_APP_SHEET_APPEND_URL;
+      // When using the proxy, do not include a client-side token. The proxy will inject the server token.
+      const APPEND_TOKEN = useProxy ? '' : process.env.REACT_APP_SHEET_APPEND_TOKEN;
+      if (!APPEND_URL) throw new Error('REACT_APP_SHEET_APPEND_URL or proxy must be configured.');
       const payload = { service: 'user', row: rowData };
       if (APPEND_TOKEN) payload.token = APPEND_TOKEN;
       const res = await fetch(APPEND_URL, {
@@ -116,14 +116,12 @@ function ReservationForm({ formData, setFormData }) {
       alert('예약 정보가 저장되었습니다.');
       setFormData({});
     } catch (error) {
-      console.error(error);
+      console.error('Save error:', error);
       alert('저장 중 오류가 발생했습니다. ' + (error.message || ''));
     } finally {
       setLoading(false);
     }
-  };
-
-  return (
+  };  return (
     <div className="customer-info">
       <h2 className="step-title">예약자 정보 </h2>
       <div style={{marginBottom:'10px', color:'#888', fontSize:'0.95rem', fontWeight:'normal'}}>

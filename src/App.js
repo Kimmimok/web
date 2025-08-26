@@ -15,7 +15,8 @@ import './App.css';
 
 function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [currentPage, setCurrentPage] = useState(window.innerWidth < 768 ? 'mobileform' : 'dashboard');
+  // 기본 진입 시 모바일 예약 입력폼을 표시하도록 변경
+  const [currentPage, setCurrentPage] = useState('mobileform');
 
   useEffect(() => {
     const handleResize = () => {

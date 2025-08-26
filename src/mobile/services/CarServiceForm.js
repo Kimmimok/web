@@ -144,7 +144,7 @@ function CarServiceForm({ formData, setFormData }) {
     const cachedCruise = window.localStorage.getItem('cruise_value') || '';
     setFormData(prev => ({
       ...prev,
-      서비스ID: SHEET_ID,
+      서비스ID: process.env.REACT_APP_SHEET_ID,
       주문ID: cachedOrderId,
       Email: cachedEmail,
       크루즈: prev['크루즈'] || cachedCruise
@@ -159,16 +159,16 @@ function CarServiceForm({ formData, setFormData }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
-      // ensure Email is plain string
-      const emailIdx = FIXED_HEADERS.findIndex(h => h.key === 'Email');
-      if (emailIdx !== -1) {
-        const val = rowData[emailIdx];
-        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : JSON.stringify(val)) : String(val || '');
-      }
+      // 직접 FIXED_HEADERS 순서로 데이터 배열 생성 (빠르고 간단)
+      const rowData = FIXED_HEADERS.map(col => {
+        const value = formData[col.key] || '';
+        // Email은 문자열로 변환하여 객체가 들어가지 않도록 함
+        return col.key === 'Email' ? String(value) : value;
+      });
+      
       const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+      const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
       const targetUrl = useProxy ? '/api/append' : appendUrl;
       if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
       const payload = { service: 'car', row: rowData };
@@ -183,13 +183,12 @@ function CarServiceForm({ formData, setFormData }) {
       alert('차량 서비스 정보가 저장되었습니다.');
       setFormData({});
     } catch (error) {
-      alert('저장 중 오류가 발생했습니다.');
+      console.error('Save error:', error);
+      alert('저장 중 오류가 발생했습니다: ' + (error.message || ''));
     } finally {
       setLoading(false);
     }
-  };
-
-  return (
+  };  return (
     <div className="customer-info">
       <h2 className="step-title">크루즈 차량 정보</h2>
       <form className="sheet-columns-form" onSubmit={handleSubmit}>

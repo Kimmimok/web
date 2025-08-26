@@ -239,17 +239,17 @@ function HotelServiceForm({ formData, setFormData }) {
     e.preventDefault();
     setLoading(true);
     try {
-      let rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
-      // Ensure Email is a plain string (avoid JSX or object leakage)
-      const emailIdx = FIXED_HEADERS.findIndex(c => c.key === 'Email');
-      if (emailIdx !== -1) {
-        const val = rowData[emailIdx];
-        rowData[emailIdx] = (val && typeof val === 'object') ? (val.toString ? val.toString() : '') : String(val || '');
-      }
+      // 직접 FIXED_HEADERS 순서로 데이터 배열 생성 (빠르고 간단)
+      const rowData = FIXED_HEADERS.map(col => {
+        const value = formData[col.key] || '';
+        // Email은 문자열로 변환하여 객체가 들어가지 않도록 함
+        return col.key === 'Email' ? String(value) : value;
+      });
+      
       // Send to Apps Script webapp endpoint (set REACT_APP_SHEET_APPEND_URL and REACT_APP_SHEET_APPEND_TOKEN in .env)
       const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
       const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-  const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
+      const useProxy = (process.env.REACT_APP_USE_PROXY === 'true') || (process.env.NODE_ENV !== 'production');
       const targetUrl = useProxy ? '/api/append' : appendUrl;
       if (!targetUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
       const payload = { service: 'hotel', row: rowData };
@@ -266,13 +266,12 @@ function HotelServiceForm({ formData, setFormData }) {
       alert('호텔 서비스 정보가 저장되었습니다.');
       setFormData({});
     } catch (error) {
-      alert('저장 중 오류가 발생했습니다.');
+      console.error('Save error:', error);
+      alert('저장 중 오류가 발생했습니다: ' + (error.message || ''));
     } finally {
       setLoading(false);
     }
-  };
-
-  return (
+  };  return (
     <div className="customer-info">
       <h2 className="step-title">호텔 서비스 정보</h2>
       <form className="sheet-columns-form" onSubmit={handleSubmit}>
