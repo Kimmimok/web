@@ -75,3 +75,46 @@ curl.exe -X POST -H "Authorization: Bearer $token" -H "Content-Type: application
 
 문의
 - 테스트 결과(예: `APPEND_LOG`의 최근 6~10행 또는 `doGet?probe=tokenlen` 결과)를 올려주시면 추가 분석과 정리 작업을 도와드리겠습니다.
+
+Vercel 배포 및 환경변수 설정
+--------------------------------
+- Vercel 대시보드 이용(권장)
+  1. Vercel에서 프로젝트 선택
+  2. 왼쪽 메뉴 Settings → Environment Variables
+  3. 변수 추가: `Name`에 `REACT_APP_SHEET_APPEND_URL`, `Value`에 exec URL 입력, Environment는 `Production`(또는 `Preview`/`Development`) 선택
+  4. `REACT_APP_SHEET_APPEND_TOKEN`도 동일하게 추가
+  5. 변경 후 배포 트리거(자동 또는 수동 배포)
+
+- Vercel CLI로 설정 (PowerShell 예)
+  1. Vercel CLI 설치:
+
+```powershell
+npm i -g vercel
+```
+
+ 2. 프로젝트 루트에서 로그인 및 연결:
+
+```powershell
+vercel login
+vercel link
+# follow prompts to link to your Vercel project
+```
+
+ 3. 환경변수 추가(예: Production 환경). CLI는 대화형이므로 값은 입력하라는 프롬프트에 따르거나 다음처럼 직접 전달할 수 있습니다:
+
+```powershell
+# interactive 방식
+vercel env add REACT_APP_SHEET_APPEND_URL production
+# 비대화형(간혹 동작 환경에 따라 다름)
+vercel env add REACT_APP_SHEET_APPEND_URL "https://script.google.com/macros/s/XXX/exec" production
+
+vercel env add REACT_APP_SHEET_APPEND_TOKEN production
+```
+
+ 4. 배포 시 Vercel이 빌드에 환경변수를 주입합니다. 빌드 로그에서 환경변수 주입 성공 여부를 확인하세요.
+
+- 보안 및 운영 팁
+  - 프론트엔드 환경변수는 빌드 시 정적으로 포함되므로 민감한 값을 노출하지 않도록 주의하세요. 가능한 경우 민감 정보는 서버측에서 보호하세요.
+  - 토큰을 즉시 무효화/교체해야 할 경우(이미 리모트에 푸시된 경우) 새 토큰을 발급하고 Vercel 환경변수에서 업데이트하세요.
+  - Vercel에서는 `Preview`와 `Production` 환경을 구분해 각각 다른 값을 사용할 수 있습니다.
+

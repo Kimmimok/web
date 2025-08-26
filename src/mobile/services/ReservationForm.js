@@ -208,7 +208,6 @@ function ReservationForm({ formData, setFormData }) {
                 onChange={e => handleInputChange(col.key, e.target.value)}
                 placeholder={col.label}
                 required={col.required}
-                pattern="^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$"
                 title="올바른 이메일 주소를 입력하세요."
               />
             ) : (
