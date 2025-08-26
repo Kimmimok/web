@@ -89,10 +89,13 @@ function ReservationForm({ formData, setFormData }) {
     try {
       const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
       // 서버(또는 Apps Script 웹앱)에 서비스 키와 행 데이터를 보내도록 변경
-      const APPEND_URL = process.env.REACT_APP_SHEET_APPEND_URL;
-      const APPEND_TOKEN = process.env.REACT_APP_SHEET_APPEND_TOKEN;
-      if (!APPEND_URL) throw new Error('REACT_APP_SHEET_APPEND_URL이 설정되어 있지 않습니다.');
-      const res = await fetch(APPEND_URL, {
+  // Use proxy when deployed on Vercel (set REACT_APP_USE_PROXY=true),
+  // otherwise use the direct APPEND URL if provided.
+  const useProxy = (process.env.REACT_APP_USE_PROXY || '').toString() === 'true';
+  const APPEND_URL = useProxy ? '/api/append' : process.env.REACT_APP_SHEET_APPEND_URL;
+  const APPEND_TOKEN = process.env.REACT_APP_SHEET_APPEND_TOKEN;
+  if (!APPEND_URL) throw new Error('REACT_APP_SHEET_APPEND_URL or proxy must be configured.');
+  const res = await fetch(APPEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ service: 'user', row: rowData, token: APPEND_TOKEN })
