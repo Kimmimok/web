@@ -177,7 +177,7 @@ function AirportServiceForm({ formData, setFormData }) {
           </div>
         )}
         {FIXED_HEADERS
-          .filter(col => col.key !== '서비스ID' && col.key !== '주문ID' && col.key !== 'ID' && col.key !== '장소명')
+          .filter(col => col.key !== '서비스ID' && col.key !== '주문ID' && col.key !== 'ID' && col.key !== '장소명' && col.key !== '구분' && col.key !== '차량코드' && col.key !== '금액' && col.key !== '합계' && col.key !== '패스트')
           .map((col, idx) => (
             <React.Fragment key={col.key}>
               <div className="form-group">
@@ -201,6 +201,25 @@ function AirportServiceForm({ formData, setFormData }) {
                         }}
                         onClick={() => handleInputChange(col.key, num)}
                       >{num}</button>
+                    ))}
+                  </div>
+                ) : col.key === '분류' ? (
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '6px' }}>
+                    {['픽업', '샌딩'].map(opt => (
+                      <button
+                        key={opt}
+                        type="button"
+                        style={{
+                          backgroundColor: formData['분류'] === opt ? '#007bff' : '#f0f0f0',
+                          color: formData['분류'] === opt ? '#fff' : '#333',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          padding: '6px 16px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleInputChange('분류', opt)}
+                      >{opt}</button>
                     ))}
                   </div>
                 ) : col.key === '구분' ? (
@@ -272,6 +291,25 @@ function AirportServiceForm({ formData, setFormData }) {
                     <option value="노이바이 국내선">노이바이 국내선</option>
                     <option value="깟바 국내선">깟바 국내선</option>
                   </select>
+                ) : col.key === 'Email' ? (
+                  <input
+                    type="email"
+                    id={`shp_${col.key}`}
+                    value={formData['Email'] || ''}
+                    readOnly
+                    style={{ background: '#f0f0f0', color: '#888' }}
+                  />
+                ) : col.key === '경유지대기시간' ? (
+                  <input
+                    type="number"
+                    id={`shp_${col.key}`}
+                    value={formData['경유지대기시간'] || ''}
+                    onChange={e => handleInputChange('경유지대기시간', Math.max(0, Math.round(e.target.value/10)*10))}
+                    min={0}
+                    step={10}
+                    placeholder="분"
+                    required={col.required}
+                  />
                 ) : (
                   <input
                     type={col.type}

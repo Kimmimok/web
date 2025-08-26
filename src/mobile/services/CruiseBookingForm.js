@@ -345,7 +345,7 @@ function CruiseBookingForm({ formData, setFormData }) {
     <div className="customer-info">
       <h2 className="step-title">크루즈 객실 정보</h2>
       <form className="sheet-columns-form" onSubmit={handleSubmit}>
-        {CRUISE_COLUMNS.filter(col => col.key !== 'ID' && col.key !== '주문ID').map((col, idx) => (
+  {CRUISE_COLUMNS.filter(col => col.key !== 'ID' && col.key !== '주문ID' && col.key !== '금액' && col.key !== '객실코드').map((col, idx) => (
           <React.Fragment key={idx}>
             <div className="form-group">
               <label htmlFor={`cruise_${col.key}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

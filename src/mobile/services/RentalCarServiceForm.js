@@ -12,8 +12,6 @@ const FIXED_HEADERS = [
   { key: '차량대수', label: '차량대수', type: 'number', required: false },
   { key: '승차일자', label: '승차일자', type: 'date', required: false },
   { key: '승차시간', label: '승차시간', type: 'text', required: false },
-    { key: '차량대수', label: '차량대수', type: 'number', required: false },
-    { key: '승차인원', label: '승차인원', type: 'number', required: false },
   { key: '목적지', label: '목적지', type: 'text', required: false },
   { key: '경유지', label: '경유지', type: 'text', required: false },
   { key: '승차인원', label: '승차인원', type: 'number', required: false },
@@ -155,7 +153,7 @@ function RentalCarServiceForm({ formData, setFormData }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // 구분 기본값 왕복
+  // 구분 기본값 왕복, 차량대수 기본값 1
   useEffect(() => {
     const cachedOrderId = window.localStorage.getItem('reservation_orderId') || `ORD-${Date.now()}`;
     const cachedEmail = window.localStorage.getItem('user_email') || '';
@@ -165,7 +163,8 @@ function RentalCarServiceForm({ formData, setFormData }) {
       주문ID: cachedOrderId,
       Email: cachedEmail,
       구분: prev['구분'] || '왕복',
-      분류: prev['구분'] === '편도' ? '없음' : (prev['분류'] || '')
+      분류: prev['구분'] === '편도' ? '없음' : (prev['분류'] || ''),
+      차량대수: prev['차량대수'] || 1
     }));
   }, []);
 
@@ -209,7 +208,7 @@ function RentalCarServiceForm({ formData, setFormData }) {
       <h2 className="step-title">렌트카 서비스 정보</h2>
       <form className="sheet-columns-form" onSubmit={handleSubmit}>
         {FIXED_HEADERS
-          .filter(col => col.key !== '서비스ID' && col.key !== '주문ID' && col.key !== 'ID')
+          .filter(col => col.key !== '서비스ID' && col.key !== '주문ID' && col.key !== 'ID' && col.key !== '차량코드' && col.key !== '사용기간' && col.key !== '금액' && col.key !== '합계')
           .map((col, idx) => (
             <div className="form-group" key={idx}>
               <label htmlFor={`shrc_${col.key}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -324,6 +323,15 @@ function RentalCarServiceForm({ formData, setFormData }) {
                   id={`shrc_승차시간`}
                   value={formData['승차시간'] || ''}
                   onChange={e => handleInputChange('승차시간', e.target.value)}
+                  placeholder={col.label}
+                  required={col.required}
+                />
+              ) : col.key === 'Email' ? (
+                <input
+                  type={col.type}
+                  id={`shrc_${col.key}`}
+                  value={formData[col.key] || ''}
+                  readOnly
                   placeholder={col.label}
                   required={col.required}
                 />

@@ -154,11 +154,7 @@ function CarServiceForm({ formData, setFormData }) {
     e.preventDefault();
     setLoading(true);
     try {
-      // 분류값 변환: 승차 → 픽업, 하차 → 샌딩
-      const saveData = { ...formData };
-      if (saveData['분류'] === '승차') saveData['분류'] = '픽업';
-      else if (saveData['분류'] === '하차') saveData['분류'] = '샌딩';
-      const rowData = FIXED_HEADERS.map(col => saveData[col.key] || '');
+      const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
       await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/SH_C!A1:append?valueInputOption=USER_ENTERED&key=${API_KEY}`,
         {
@@ -181,7 +177,7 @@ function CarServiceForm({ formData, setFormData }) {
       <h2 className="step-title">크루즈 차량 정보</h2>
       <form className="sheet-columns-form" onSubmit={handleSubmit}>
         {FIXED_HEADERS
-          .filter(col => col.key !== '서비스ID' && col.key !== '주문ID' && col.key !== 'ID')
+            .filter(col => col.key !== '서비스ID' && col.key !== '주문ID' && col.key !== 'ID' && col.key !== '차량코드' && col.key !== '금액' && col.key !== '합계')
           .map((col, idx) => (
             <div className="form-group" key={idx}>
               <label htmlFor={`shc_${col.key}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -264,29 +260,29 @@ function CarServiceForm({ formData, setFormData }) {
                   <button
                     type="button"
                     style={{
-                      backgroundColor: formData['분류'] === '승차' ? '#007bff' : '#f0f0f0',
-                      color: formData['분류'] === '승차' ? '#fff' : '#333',
+                      backgroundColor: formData['분류'] === '픽업' ? '#007bff' : '#f0f0f0',
+                      color: formData['분류'] === '픽업' ? '#fff' : '#333',
                       border: '1px solid #ccc',
                       borderRadius: '4px',
                       padding: '6px 16px',
                       fontWeight: 'bold',
                       cursor: 'pointer'
                     }}
-                    onClick={() => handleInputChange('분류', '승차')}
-                  >승차</button>
+                    onClick={() => handleInputChange('분류', '픽업')}
+                  >픽업</button>
                   <button
                     type="button"
                     style={{
-                      backgroundColor: formData['분류'] === '하차' ? '#007bff' : '#f0f0f0',
-                      color: formData['분류'] === '하차' ? '#fff' : '#333',
+                      backgroundColor: formData['분류'] === '드랍' ? '#007bff' : '#f0f0f0',
+                      color: formData['분류'] === '드랍' ? '#fff' : '#333',
                       border: '1px solid #ccc',
                       borderRadius: '4px',
                       padding: '6px 16px',
                       fontWeight: 'bold',
                       cursor: 'pointer'
                     }}
-                    onClick={() => handleInputChange('분류', '하차')}
-                  >하차</button>
+                    onClick={() => handleInputChange('분류', '드랍')}
+                  >드랍</button>
                 </div>
               ) : col.key === '차량종류' ? (
                 <select
