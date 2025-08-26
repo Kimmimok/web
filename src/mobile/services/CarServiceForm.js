@@ -155,14 +155,17 @@ function CarServiceForm({ formData, setFormData }) {
     setLoading(true);
     try {
       const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/SH_C!A1:append?valueInputOption=USER_ENTERED&key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ values: [rowData] })
-        }
-      );
+      const appendUrl = process.env.REACT_APP_SHEET_APPEND_URL;
+      const appendToken = process.env.REACT_APP_SHEET_APPEND_TOKEN;
+      if (!appendUrl) throw new Error('Append URL not configured. Set REACT_APP_SHEET_APPEND_URL in .env');
+      const payload = { service: 'car', row: rowData, token: appendToken };
+      const res = await fetch(appendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Append failed');
       alert('차량 서비스 정보가 저장되었습니다.');
       setFormData({});
     } catch (error) {

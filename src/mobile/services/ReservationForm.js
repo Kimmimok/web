@@ -88,18 +88,24 @@ function ReservationForm({ formData, setFormData }) {
     setLoading(true);
     try {
       const rowData = FIXED_HEADERS.map(col => formData[col.key] || '');
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/SH_M!A1:append?valueInputOption=USER_ENTERED&key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ values: [rowData] })
-        }
-      );
+      // 서버(또는 Apps Script 웹앱)에 서비스 키와 행 데이터를 보내도록 변경
+      const APPEND_URL = process.env.REACT_APP_SHEET_APPEND_URL;
+      const APPEND_TOKEN = process.env.REACT_APP_SHEET_APPEND_TOKEN;
+      if (!APPEND_URL) throw new Error('REACT_APP_SHEET_APPEND_URL이 설정되어 있지 않습니다.');
+      const res = await fetch(APPEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service: 'user', row: rowData, token: APPEND_TOKEN })
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`서버 응답 오류: ${res.status} ${txt}`);
+      }
       alert('예약 정보가 저장되었습니다.');
       setFormData({});
     } catch (error) {
-      alert('저장 중 오류가 발생했습니다.');
+      console.error(error);
+      alert('저장 중 오류가 발생했습니다. ' + (error.message || ''));
     } finally {
       setLoading(false);
     }
